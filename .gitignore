@@ -1,0 +1,10 @@
+.idea
+*.iml
+*.log
+.metadata
+target
+.project
+.classpath
+.settings
+workspace.xml
+!.gitkeep
