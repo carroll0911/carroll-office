@@ -3,7 +3,6 @@ package com.carroll.office;
 /**
  * @author: carroll.he
  * @date 2020/5/26
- * Copyright @2020 Tima Networks Inc. All Rights Reserved. 
  */
 public class OfficeException extends Exception {
     private String code;
