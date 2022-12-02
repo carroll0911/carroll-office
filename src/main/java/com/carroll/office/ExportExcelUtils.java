@@ -8,38 +8,63 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.*;
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.sql.Date;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Excel 导出工具类
+ *
  * @author: carroll.he
  * @date 2020/5/27
  */
 @Slf4j
 public class ExportExcelUtils {
-    private ExportExcelUtils(){}
 
-    public static int fillTableHeader(String headerTitle, HSSFSheet sheet, String[] colNm, Integer[] colWidth) {
+    private ExportExcelUtils() {
+    }
+
+    /**
+     * 填充表头
+     * @param headerTitle   表格标题
+     * @param sheet         表
+     * @param colNm         列标题
+     * @param colWidth      列宽
+     * @return              返回下一行的行索引
+     */
+    public static int fillTableHeader(String headerTitle, XSSFSheet sheet, String[] colNm, Integer[] colWidth) {
         int writeCol = 0;
-        HSSFCellStyle cellStyleTitle = cellStyleTitle(sheet.getWorkbook(), StyleCategory.HEADER);
-        HSSFCellStyle cellStyleColNm = cellStyleTitle(sheet.getWorkbook(), StyleCategory.COLUMN_HEADER);
+        XSSFCellStyle cellStyleTitle = cellStyleTitle(sheet.getWorkbook(), StyleCategory.HEADER);
+        XSSFCellStyle cellStyleColNm = cellStyleTitle(sheet.getWorkbook(), StyleCategory.COLUMN_HEADER);
         cellStyleTitle.setAlignment(HorizontalAlignment.CENTER);
         cellStyleColNm.setAlignment(HorizontalAlignment.CENTER);
         setCellBorder(cellStyleColNm);
+        setCellBorder(cellStyleTitle);
         return fillTableHeader(headerTitle, sheet, colNm, colWidth, writeCol, cellStyleTitle, cellStyleColNm);
     }
 
-    public static int fillTableHeader(String headerTitle, HSSFSheet sheet, String[] colNm, Integer[] colWidth, int writeCol, HSSFCellStyle cellStyleTitle, HSSFCellStyle cellStyleColNm) {
+    /**
+     * 填充表头
+     * @param headerTitle       表格标题
+     * @param sheet             表
+     * @param colNm             列标题
+     * @param colWidth          列宽
+     * @param writeCol          起始列索引
+     * @param cellStyleTitle    表标题样式
+     * @param cellStyleColNm    列标题样式
+     * @return                  返回下一行的行索引
+     */
+    public static int fillTableHeader(String headerTitle, XSSFSheet sheet, String[] colNm, Integer[] colWidth, int writeCol, XSSFCellStyle cellStyleTitle, XSSFCellStyle cellStyleColNm) {
         int colLength = colWidth.length;
-        HSSFRow row = null;
-        HSSFCell cell2 = null;
+        XSSFRow row = null;
+        XSSFCell cell2 = null;
         if (!isNullOrEmpty(headerTitle)) {
             sheet.addMergedRegion(new CellRangeAddress(writeCol, writeCol, 0, colLength - 1));
             row = sheet.createRow(writeCol++);
@@ -48,8 +73,8 @@ public class ExportExcelUtils {
             cell2 = row.createCell(0);
             for (int i = 0; i < colLength; i++) {
                 cell2 = row.createCell(i);
+                cell2.setCellStyle(cellStyleTitle);
                 if (i == 0) {
-                    cell2.setCellStyle(cellStyleTitle);
                     cell2.setCellValue(headerTitle);
                 }
             }
@@ -59,7 +84,7 @@ public class ExportExcelUtils {
         //列名
         for (int i = 0; i < colLength; i++) {
             sheet.setColumnWidth(i, colWidth[i] * 512);//设置列宽
-            HSSFCell cell = row.createCell(i);
+            XSSFCell cell = row.createCell(i);
             cell.setCellStyle(cellStyleColNm);
             cell.setCellValue(colNm[i]);
         }
@@ -69,21 +94,28 @@ public class ExportExcelUtils {
     /**
      * 设置单元格边框
      */
-    public static void setCellBorder(HSSFCellStyle cellStyle) {
+    public static void setCellBorder(XSSFCellStyle cellStyle) {
         cellStyle.setBorderBottom(BorderStyle.THIN);
         cellStyle.setBorderTop(BorderStyle.THIN);
         cellStyle.setBorderLeft(BorderStyle.THIN);
         cellStyle.setBorderRight(BorderStyle.THIN);
     }
 
-    public static HSSFCellStyle cellStyleTitle(HSSFWorkbook wb, StyleCategory category) {
+    /**
+     * 获取样式
+     * @param wb
+     * @param category  样式类型
+     * @return          样式
+     */
+    public static XSSFCellStyle cellStyleTitle(XSSFWorkbook wb, StyleCategory category) {
         //表头样式
-        HSSFCellStyle cellStyle = wb.createCellStyle();
-        HSSFFont font = wb.createFont();
+        XSSFCellStyle cellStyle = wb.createCellStyle();
+        XSSFFont font = wb.createFont();
         switch (category) {
             case HEADER:
                 font.setFontHeightInPoints((short) 20);
                 font.setBoldweight(Font.BOLDWEIGHT_BOLD);
+                cellStyle.setFillPattern(XSSFCellStyle.SOLID_FOREGROUND);
                 cellStyle.setFont(font);
                 break;
             case MAIN:
@@ -95,7 +127,7 @@ public class ExportExcelUtils {
                 font.setFontHeightInPoints((short) 10);
                 font.setBoldweight(Font.BOLDWEIGHT_BOLD);
 
-                cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+                cellStyle.setFillPattern(XSSFCellStyle.SOLID_FOREGROUND);
                 cellStyle.setFillForegroundColor(HSSFColor.GREY_25_PERCENT.index);
                 cellStyle.setFont(font);
                 break;
@@ -125,12 +157,19 @@ public class ExportExcelUtils {
         }
     }
 
-    public static void fillRowData(HSSFSheet sheet, Object[] colDatas, Integer[] colWidth, int writeCol) {
-        HSSFRow row = sheet.createRow(writeCol++);
+    /**
+     * 填充表数据
+     * @param sheet     表
+     * @param colDatas  数据
+     * @param colWidth  列宽
+     * @param writeCol  起始列索引
+     */
+    public static void fillRowData(XSSFSheet sheet, Object[] colDatas, Integer[] colWidth, int writeCol) {
+        XSSFRow row = sheet.createRow(writeCol++);
         //设置备注的样式
-        HSSFCellStyle cellStyle = sheet.getWorkbook().createCellStyle();
+        XSSFCellStyle cellStyle = sheet.getWorkbook().createCellStyle();
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
-        HSSFFont font = sheet.getWorkbook().createFont();
+        XSSFFont font = sheet.getWorkbook().createFont();
         font.setFontName("楷体");
         font.setFontHeightInPoints((short) 12);
         cellStyle.setFont(font);
@@ -141,7 +180,7 @@ public class ExportExcelUtils {
         for (int i = 0; i < colLength; i++) {
             //设置列宽
             sheet.setColumnWidth(i, colWidth[i] * 512);
-            HSSFCell cell = row.createCell(i);
+            XSSFCell cell = row.createCell(i);
             cell.setCellStyle(cellStyle);
             cell.setCellValue(colDatas[i] == null ? "" : String.valueOf(colDatas[i]));
         }
@@ -155,7 +194,7 @@ public class ExportExcelUtils {
      * @param colWidth
      * @param writeCol
      */
-    public static void fillRowData(HSSFSheet sheet, List<Object[]> rowsData, Integer[] colWidth, int writeCol) {
+    public static void fillRowData(XSSFSheet sheet, List<Object[]> rowsData, Integer[] colWidth, int writeCol) {
         int index = 0;
         for (Object[] rowData : rowsData) {
             fillRowData(sheet, rowData, colWidth, writeCol + index);
@@ -177,17 +216,15 @@ public class ExportExcelUtils {
      * @param colWidths 列宽
      * @return
      * @throws Exception
-     * @author: zhouyang
-     * date: 2013-4-12
      */
 
-    public static Map<String, Integer> addCols(HSSFWorkbook wb, HSSFSheet sheet, List<?> addList, String objAddr, Map<String, Integer> map, String[] fields, String typeNm, String remark, Integer[] colWidths, HSSFCellStyle cellStyleMain) throws Exception {
+    public static Map<String, Integer> addCols(XSSFWorkbook wb, XSSFSheet sheet, List<?> addList, String objAddr, Map<String, Integer> map, String[] fields, String typeNm, String remark, Integer[] colWidths, XSSFCellStyle cellStyleMain) throws Exception {
         int rownumStart = 0;
         int seqNum = 0;
         //设置备注的样式
-        HSSFCellStyle cellStyle = wb.createCellStyle();
+        XSSFCellStyle cellStyle = wb.createCellStyle();
         cellStyle.setAlignment(CellStyle.ALIGN_LEFT);
-        HSSFFont font = wb.createFont();
+        XSSFFont font = wb.createFont();
         font.setFontName("楷体");
         font.setFontHeightInPoints((short) 12);
         cellStyle.setFont(font);
@@ -196,8 +233,8 @@ public class ExportExcelUtils {
         //添加边框
         setCellBorder(cellStyle);
         setCellBorder(cellStyleMain);
-        HSSFRow row = null;
-        HSSFCell cell1 = null;
+        XSSFRow row = null;
+        XSSFCell cell1 = null;
         int colLength = colWidths.length;
         int arrayLength = colLength;
         if (!isNullOrEmpty(remark)) {
@@ -337,20 +374,64 @@ public class ExportExcelUtils {
         return ((int) (defaultCount / (fontCountInline * 2)) + 1) * defaultRowHeight;
     }
 
+    public static void export(String headerTitle, String[] colTitle, Integer[] widthArr, List<Object[]> data, XSSFSheet sheet, OutputStream out) throws Exception {
+        int rowIndex = ExportExcelUtils.fillTableHeader(headerTitle, sheet, colTitle, widthArr);
+        ExportExcelUtils.fillRowData(sheet, data, widthArr, rowIndex);
+        writeExport(sheet.getWorkbook(), out);
+    }
+
+    public static void export(String headerTitle, String[] colTitle, Integer[] widthArr, List<Object[]> data, String sheetName, String fileName) throws Exception {
+        XSSFWorkbook wb = new XSSFWorkbook();
+        XSSFSheet sheet = wb.createSheet(sheetName);
+        FileOutputStream fout = new FileOutputStream(fileName);
+        export(headerTitle, colTitle, widthArr, data, sheet, fout);
+    }
+
+    public static void writeExport(XSSFWorkbook wb, OutputStream out) throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        wb.write(outputStream);
+        byte[] content = outputStream.toByteArray();
+        InputStream is = new ByteArrayInputStream(content);
+        BufferedInputStream bis = null;
+        BufferedOutputStream bos = null;
+        try {
+            bis = new BufferedInputStream(is);
+            bos = new BufferedOutputStream(out);
+            byte[] buff = new byte[2048];
+            int bytesRead;
+            // Simple read/write loop.
+            while (-1 != (bytesRead = bis.read(buff, 0, buff.length))) {
+                bos.write(buff, 0, bytesRead);
+            }
+        } catch (final IOException e) {
+            throw e;
+        } finally {
+            if (bis != null) {
+                bis.close();
+            }
+            if (bos != null) {
+                bos.close();
+            }
+        }
+    }
+
     private static String getStrDateFormat(java.util.Date date, String format) {
         SimpleDateFormat dateFormat = new SimpleDateFormat(format);
         return null != date ? dateFormat.format(date) : "";
     }
 
-    private static boolean isNullOrEmpty(String str){
-        return str==null||"".equals(str);
+    private static boolean isNullOrEmpty(String str) {
+        return str == null || "".equals(str);
     }
 
-//    public static void main(String[] args) throws Exception {
-//        HSSFWorkbook wb = new HSSFWorkbook();
-//        HSSFSheet sheet = wb.createSheet("test");
-//        String[] colNames = new String[]{"test1", "test2 xxxx"};
-//        Integer[] colWidth = new Integer[]{5, 10};
+    public static void main(String[] args) throws Exception {
+//        XSSFWorkbook wb = new XSSFWorkbook();
+//        XSSFSheet sheet = wb.createSheet("test");
+        String[] colNames = new String[]{"test1", "test2 xxxx"};
+        Integer[] colWidth = new Integer[]{5, 10};
+        List<Object[]> data = new ArrayList<>();
+        data.add(new String[]{"0123", "xxxxx"});
+        export("test header title", colNames, colWidth, data, "test sheet", "d:/test.xlsx");
 //        int rowIndex = fillTableHeader("", sheet, colNames, colWidth);
 //        fillRowData(sheet, new String[]{"0123", "xxxxx"}, colWidth, rowIndex);
 //        rowIndex++;
@@ -383,5 +464,5 @@ public class ExportExcelUtils {
 //                bos.close();
 //            }
 //        }
-//    }
+    }
 }
